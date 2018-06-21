@@ -3,6 +3,8 @@ provider "aws" {
 	region = "eu-west-2"
 }
 
+
+
 # Launch configuration for autoscaling group
 resource "aws_launch_configuration" "ecs-launch-configuration" {
 	name = "ecs-launch-configuration"
@@ -10,7 +12,7 @@ resource "aws_launch_configuration" "ecs-launch-configuration" {
 	instance_type = "t2.micro"
 	
 	root_block_device {
-		volume_type = "standart"
+		volume_type = "standard"
 		volume_size = 100
 		delete_on_termination = true
 	}
@@ -20,7 +22,8 @@ resource "aws_launch_configuration" "ecs-launch-configuration" {
 	}
 	
 	associate_public_ip_address = "false"
-	key_name = "testone"
+	key_name = "denysiuk"
+	user_data = "#!/bin/bash\necho ECS_CLUSTER='${aws_ecs_cluster.ecs-cluster.name}' > /etc/ecs/ecs.config"
 }
 
 # Creates autoscaling group
@@ -30,11 +33,9 @@ resource "aws_autoscaling_group" "ecs-autoscaling-group" {
 	
 	launch_configuration = "${aws_launch_configuration.ecs-launch-configuration.name}"
 	
-	tag {
-		key = "Name"
-		value = "ecs-inc-25"
-		propagate_at_launch = true
-	}
+	vpc_zone_identifier = ["subnet-96b8a0ed"]
+	
+	name = "ecs-inc-25"
 }
 
 # Creates ECS cluster
@@ -51,7 +52,7 @@ data "aws_ecs_task_definition" "ecs-task-definition" {
 
 # Creates task definition
 resource "aws_ecs_task_definition" "ecs-task-definition" {
-  family = "test"
+  family = "inc25"
 
   container_definitions = <<DEFINITION
 [
@@ -59,9 +60,9 @@ resource "aws_ecs_task_definition" "ecs-task-definition" {
     "cpu": 128,
     "essential": true,
     "image": "ubuntu",
-    "memory": 128,
+    "memory": 512,
     "memoryReservation": 64,
-    "name": "test"
+    "name": "inc25"
   }
 ]
 DEFINITION
@@ -69,7 +70,7 @@ DEFINITION
 
 # Creates ECS service with two instances
 resource "aws_ecs_service" "ecs-service" {
-  name          = "test"
+  name          = "inc25ecsservice"
   cluster       = "${aws_ecs_cluster.ecs-cluster.id}"
   desired_count = 2
 
